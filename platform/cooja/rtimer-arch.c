@@ -48,44 +48,46 @@
 #define PRINTF(...)
 #endif
 
-/* COOJA */
-int simRtimerPending;
-rtimer_clock_t simRtimerNextExpirationTime;
-rtimer_clock_t simRtimerCurrentTicks;
+extern clock_time_t simCurrentTime;
+
+static int pending_rtimer = 0;
+static rtimer_clock_t next_rtimer = 0;
+static clock_time_t last_rtimer_now = 0;
 
 /*---------------------------------------------------------------------------*/
 void
 rtimer_arch_init(void)
 {
-  simRtimerNextExpirationTime = 0;
-  simRtimerPending = 0;
+  next_rtimer = 0;
+  last_rtimer_now = 0;
+  pending_rtimer = 0;
 }
 /*---------------------------------------------------------------------------*/
 void
 rtimer_arch_schedule(rtimer_clock_t t)
 {
-  simRtimerNextExpirationTime = t;
-  simRtimerPending = 1;
+  next_rtimer = t;
+  pending_rtimer = 1;
 }
 /*---------------------------------------------------------------------------*/
 rtimer_clock_t
 rtimer_arch_next(void)
 {
-  return simRtimerNextExpirationTime;
+  return next_rtimer;
 }
 /*---------------------------------------------------------------------------*/
 int
 rtimer_arch_pending(void)
 {
-  return simRtimerPending;
+  return pending_rtimer;
 }
 /*---------------------------------------------------------------------------*/
 int
 rtimer_arch_check(void)
 {
-  if (simRtimerCurrentTicks == simRtimerNextExpirationTime) {
+  if (simCurrentTime == next_rtimer) {
     /* Execute rtimer */
-    simRtimerPending = 0;
+    pending_rtimer = 0;
     rtimer_run_next();
     return 1;
   }
@@ -95,7 +97,14 @@ rtimer_arch_check(void)
 rtimer_clock_t
 rtimer_arch_now(void)
 {
-  return simRtimerCurrentTicks;
+  if(last_rtimer_now == simCurrentTime) {
+    /* Yield to COOJA, to allow time to change */
+    simProcessRunValue = 1;
+    simNextExpirationTime = simCurrentTime + 1;
+    cooja_mt_yield();
+  }
+  last_rtimer_now = simCurrentTime;
+  return simCurrentTime;
 }
 /*---------------------------------------------------------------------------*/
 

@@ -33,7 +33,7 @@
  * @{
  *
  * \file
- *  Driver for the Sensortag Opt3001 light sensor
+ *  Driver for the Sensortag-CC26xx Opt3001 light sensor
  */
 /*---------------------------------------------------------------------------*/
 #include "contiki-conf.h"
@@ -132,7 +132,7 @@ static struct ctimer startup_timer;
  * \brief Select the sensor on the I2C bus
  */
 static void
-select_on_bus(void)
+select(void)
 {
   /* Select slave and set clock rate */
   board_i2c_select(BOARD_I2C_INTERFACE_0, OPT3001_I2C_ADDRESS);
@@ -148,7 +148,7 @@ notify_ready(void *not_used)
    */
   uint16_t val;
 
-  select_on_bus();
+  select();
 
   sensor_common_read_reg(REG_CONFIGURATION, (uint8_t *)&val, REGISTER_LENGTH);
 
@@ -170,7 +170,7 @@ enable_sensor(bool enable)
   uint16_t val;
   uint16_t had_data_ready = state & SENSOR_STATE_DATA_READY;
 
-  select_on_bus();
+  select();
 
   if(enable) {
     val = CONFIG_ENABLE_SINGLE_SHOT;
@@ -202,7 +202,7 @@ read_data(uint16_t *raw_data)
     return false;
   }
 
-  select_on_bus();
+  select();
 
   success = sensor_common_read_reg(REG_CONFIGURATION, (uint8_t *)&val,
                                    REGISTER_LENGTH);
@@ -223,7 +223,7 @@ read_data(uint16_t *raw_data)
 /*---------------------------------------------------------------------------*/
 /**
  * \brief Convert raw data to a value in lux
- * \param raw_data data Pointer to a buffer with a raw sensor reading
+ * \param data Pointer to a buffer with a raw sensor reading
  * \return Converted value (lux)
  */
 static float

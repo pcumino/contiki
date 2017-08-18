@@ -31,16 +31,8 @@
 /** \addtogroup cc26xx-srf-tag
  * @{
  *
- * \defgroup sensortag-cc26xx-peripherals Sensortag CC1350/CC2650 common
- *
- * Defines related to Sensortag sensors. The two sensortags are identical to a
- * very large extent. Everything documented within this group applies to both
- * sensortags.
- *
- * @{
- *
  * \file
- * Header file with definitions related to the sensors on the Sensortags
+ * Header file with definitions related to the sensors on the Sensortag-CC26xx
  *
  * \note   Do not include this file directly.
  */
@@ -60,6 +52,5 @@
 #endif /* BOARD_PERIPHERALS_H_ */
 /*---------------------------------------------------------------------------*/
 /**
- * @}
  * @}
  */

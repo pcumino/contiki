@@ -38,7 +38,7 @@
  * @{
  *
  * \file
- * Header file for the Sensortag Button Driver
+ * Header file for the Sensortag-CC26xx Button Driver
  */
 /*---------------------------------------------------------------------------*/
 #ifndef BUTTON_SENSOR_H_

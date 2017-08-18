@@ -33,7 +33,7 @@
  * @{
  *
  * \file
- *  Driver for the Sensortag Buzzer
+ *  Driver for the Sensortag-CC26XX Buzzer
  */
 /*---------------------------------------------------------------------------*/
 #include "contiki-conf.h"
