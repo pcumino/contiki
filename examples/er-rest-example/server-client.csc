@@ -188,7 +188,7 @@
     <minimized>true</minimized>
   </plugin>
   <plugin>
-    org.contikios.cooja.serialsocket.SerialSocketServer
+    SerialSocketServer
     <mote_arg>0</mote_arg>
     <width>422</width>
     <z>4</z>

@@ -219,7 +219,7 @@
     <location_y>182</location_y>
   </plugin>
   <plugin>
-    org.contikios.cooja.serialsocket.SerialSocketServer
+    SerialSocketServer
     <mote_arg>0</mote_arg>
     <width>422</width>
     <z>1</z>

@@ -1,7 +1,6 @@
 all: udp-client udp-server
+APPS=servreg-hack
 CONTIKI=../../..
-
-CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 ifdef WITH_COMPOWER
 APPS+=powertrace
@@ -13,10 +12,6 @@ CFLAGS+=-DSERVER_REPLY=$(SERVER_REPLY)
 endif
 ifdef PERIOD
 CFLAGS+=-DPERIOD=$(PERIOD)
-endif
-
-ifeq ($(MAKE_WITH_NON_STORING),1)
-CFLAGS += -DWITH_NON_STORING=1
 endif
 
 CONTIKI_WITH_IPV6 = 1

@@ -2,12 +2,17 @@ CONTIKI_PROJECT=border-router
 all: $(CONTIKI_PROJECT) 
 
 CONTIKI=../../..
+APP += powertrace
 
 #linker optimizations
 SMALL=1
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 PROJECT_SOURCEFILES += slip-bridge.c
+
+# Optimization
+CFLAGS += -ffunction-sections
+LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
 #Simple built-in webserver is the default.
 #Override with make WITH_WEBSERVER=0 for no webserver.
@@ -21,10 +26,6 @@ PROJECT_SOURCEFILES += slip-bridge.c
 #of the slip connection. Large MSS together with low baud rates without flow
 #control will overrun the transmit buffer when the style sheet is requested.
 
-ifeq ($(MAKE_WITH_NON_STORING),1)
-CFLAGS += -DWITH_NON_STORING=1
-endif
-
 WITH_WEBSERVER=1
 ifeq ($(WITH_WEBSERVER),1)
 CFLAGS += -DUIP_CONF_TCP=1
@@ -37,7 +38,7 @@ CFLAGS += -DWEBSERVER=2
 endif
 
 ifeq ($(PREFIX),)
- PREFIX = fd00::1/64
+ PREFIX = aaaa::1/64
 endif
 
 CONTIKI_WITH_IPV6 = 1
