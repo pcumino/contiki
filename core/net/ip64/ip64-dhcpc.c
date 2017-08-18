@@ -163,6 +163,7 @@ create_msg(CC_REGISTER_ARG struct dhcp_msg *m)
   memset(&m->chaddr[s.mac_len], 0, sizeof(m->chaddr) - s.mac_len);
 
   memset(m->sname, 0, sizeof(m->sname));
+  strcpy((char *)m->sname, "Thingsquare");
   memset(m->file, 0, sizeof(m->file));
 
 
@@ -307,6 +308,7 @@ PT_THREAD(handle_dhcp(process_event_t ev, void *data))
   }
   
  selecting:
+  xid++;
   s.ticks = CLOCK_SECOND;
   do {
     while(ev != tcpip_event) {
@@ -372,6 +374,7 @@ PT_THREAD(handle_dhcp(process_event_t ev, void *data))
   }
 
   /* renewing: */
+  xid++;
   do {
     while(ev != tcpip_event) {
       tcpip_poll_udp(s.conn);

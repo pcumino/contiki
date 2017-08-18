@@ -205,7 +205,10 @@ hdrsize(const struct packetbuf_attrlist *a)
       continue;
     }
 #endif /* CHAMELEON_WITH_MAC_LINK_ADDRESSES */
-    len = (a->len & 0xf8) + ((a->len & 7) ? 8: 0);
+    len = a->len;
+    if(len < 8) {
+      len = 8;
+    }
     size += len;
   }
   return size / 8;

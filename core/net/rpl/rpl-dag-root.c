@@ -43,9 +43,7 @@
 
 #define RPL_DAG_GRACE_PERIOD (CLOCK_SECOND * 20 * 1)
 
-#if (UIP_CONF_MAX_ROUTES != 0)
 static struct uip_ds6_notification n;
-#endif /* (UIP_CONF_MAX_ROUTES != 0) */
 static uint8_t to_become_root;
 static struct ctimer c;
 /*---------------------------------------------------------------------------*/
@@ -73,7 +71,7 @@ get_global_address(void)
     state = uip_ds6_if.addr_list[i].state;
     if(uip_ds6_if.addr_list[i].isused &&
        state == ADDR_PREFERRED &&
-       !uip_is_addr_linklocal(&uip_ds6_if.addr_list[i].ipaddr)) {
+       !uip_is_addr_link_local(&uip_ds6_if.addr_list[i].ipaddr)) {
       ipaddr = &uip_ds6_if.addr_list[i].ipaddr;
     }
   }
@@ -99,12 +97,13 @@ create_dag_callback(void *ptr)
     rpl_dag_t *dag;
 
     dag = rpl_get_any_dag();
-
-    PRINTF("RPL: Found a network we did not create\n");
-    PRINTF("RPL: version %d grounded %d preference %d used %d joined %d rank %d\n",
+#if DEBUG
+    printf("Found a network we did not create\n");
+    printf("version %d grounded %d preference %d used %d joined %d rank %d\n",
            dag->version, dag->grounded,
            dag->preference, dag->used,
            dag->joined, dag->rank);
+#endif /* DEBUG */
 
     /* We found a RPL network that we did not create so we just join
        it without becoming root. But if the network has an infinite
@@ -122,7 +121,6 @@ create_dag_callback(void *ptr)
     ctimer_set(&c, RPL_DAG_GRACE_PERIOD, create_dag_callback, NULL);
   }
 }
-#if (UIP_CONF_MAX_ROUTES != 0)
 /*---------------------------------------------------------------------------*/
 static void
 route_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr,
@@ -138,7 +136,6 @@ route_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr,
     }
   }
 }
-#endif /* (UIP_CONF_MAX_ROUTES != 0) */
 /*---------------------------------------------------------------------------*/
 static uip_ipaddr_t *
 set_global_address(void)
@@ -149,7 +146,7 @@ set_global_address(void)
 
   /* Assign a unique local address (RFC4193,
      http://tools.ietf.org/html/rfc4193). */
-  uip_ip6addr(&ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
+  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
 
@@ -174,9 +171,7 @@ rpl_dag_root_init(void)
   if(!initialized) {
     to_become_root = 0;
     set_global_address();
-#if (UIP_CONF_MAX_ROUTES != 0)
     uip_ds6_notification_add(&n, route_callback);
-#endif /* (UIP_CONF_MAX_ROUTES != 0) */
     initialized = 1;
   }
 }
@@ -195,7 +190,7 @@ rpl_dag_root_init_dag_immediately(void)
     state = uip_ds6_if.addr_list[i].state;
     if(uip_ds6_if.addr_list[i].isused &&
        state == ADDR_PREFERRED &&
-       !uip_is_addr_linklocal(&uip_ds6_if.addr_list[i].ipaddr)) {
+       !uip_is_addr_link_local(&uip_ds6_if.addr_list[i].ipaddr)) {
       ipaddr = &uip_ds6_if.addr_list[i].ipaddr;
     }
   }
@@ -211,25 +206,23 @@ rpl_dag_root_init_dag_immediately(void)
 
       /* If there are routes in this dag, we remove them all as we are
          from now on the new dag root and the old routes are wrong */
-      if(RPL_IS_STORING(dag->instance)) {
-        rpl_remove_routes(dag);
-      }
+      rpl_remove_routes(dag);
       if(dag->instance != NULL &&
          dag->instance->def_route != NULL) {
 	uip_ds6_defrt_rm(dag->instance->def_route);
         dag->instance->def_route = NULL;
       }
 
-      uip_ip6addr(&prefix, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
+      uip_ip6addr(&prefix, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
       rpl_set_prefix(dag, &prefix, 64);
-      PRINTF("RPL: rpl_dag_root_init_dag: created a new RPL dag\n");
+      PRINTF("rpl_dag_root_init_dag: created a new RPL dag\n");
       return 0;
     } else {
-      PRINTF("RPL: rpl_dag_root_init_dag: failed to create a new RPL DAG\n");
+      PRINTF("rpl_dag_root_init_dag: failed to create a new RPL DAG\n");
       return -1;
     }
   } else {
-    PRINTF("RPL: rpl_dag_root_init_dag: failed to create a new RPL DAG, no preferred IP address found\n");
+    PRINTF("rpl_dag_root_init_dag: failed to create a new RPL DAG, no preferred IP address found\n");
     return -2;
   }
 }

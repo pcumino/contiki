@@ -47,7 +47,6 @@
 #include "net/ipv6/uip-ds6.h"
 #include "net/ipv6/uip-icmp6.h"
 #include "net/rpl/rpl-private.h"
-#include "net/rpl/rpl-ns.h"
 #include "net/ipv6/multicast/uip-mcast6.h"
 
 #define DEBUG DEBUG_NONE
@@ -90,17 +89,11 @@ rpl_set_mode(enum rpl_mode m)
   } else if(m == RPL_MODE_FEATHER) {
 
     PRINTF("RPL: switching to feather mode\n");
+    mode = m;
     if(default_instance != NULL) {
-      PRINTF("RPL: rpl_set_mode: RPL sending DAO with zero lifetime\n");
-      if(default_instance->current_dag != NULL) {
-        dao_output(default_instance->current_dag->preferred_parent, RPL_ZERO_LIFETIME);
-      }
       rpl_cancel_dao(default_instance);
-    } else {
-      PRINTF("RPL: rpl_set_mode: no default instance\n");
     }
 
-    mode = m;
   } else {
     mode = m;
   }
@@ -114,7 +107,7 @@ rpl_purge_routes(void)
   uip_ds6_route_t *r;
   uip_ipaddr_t prefix;
   rpl_dag_t *dag;
-#if RPL_WITH_MULTICAST
+#if RPL_CONF_MULTICAST
   uip_mcast6_route_t *mcast_route;
 #endif
 
@@ -122,7 +115,7 @@ rpl_purge_routes(void)
   r = uip_ds6_route_head();
 
   while(r != NULL) {
-    if(r->state.lifetime >= 1 && r->state.lifetime != RPL_ROUTE_INFINITE_LIFETIME) {
+    if(r->state.lifetime >= 1) {
       /*
        * If a route is at lifetime == 1, set it to 0, scheduling it for
        * immediate removal below. This achieves the same as the original code,
@@ -143,7 +136,7 @@ rpl_purge_routes(void)
       uip_ipaddr_copy(&prefix, &r->ipaddr);
       uip_ds6_route_rm(r);
       r = uip_ds6_route_head();
-      PRINTF("RPL: No more routes to ");
+      PRINTF("No more routes to ");
       PRINT6ADDR(&prefix);
       dag = default_instance->current_dag;
       /* Propagate this information with a No-Path DAO to preferred parent if we are not a RPL Root */
@@ -159,7 +152,7 @@ rpl_purge_routes(void)
     }
   }
 
-#if RPL_WITH_MULTICAST
+#if RPL_CONF_MULTICAST
   mcast_route = uip_mcast6_route_list_head();
 
   while(mcast_route != NULL) {
@@ -178,7 +171,7 @@ void
 rpl_remove_routes(rpl_dag_t *dag)
 {
   uip_ds6_route_t *r;
-#if RPL_WITH_MULTICAST
+#if RPL_CONF_MULTICAST
   uip_mcast6_route_t *mcast_route;
 #endif
 
@@ -193,7 +186,7 @@ rpl_remove_routes(rpl_dag_t *dag)
     }
   }
 
-#if RPL_WITH_MULTICAST
+#if RPL_CONF_MULTICAST
   mcast_route = uip_mcast6_route_list_head();
 
   while(mcast_route != NULL) {
@@ -216,10 +209,12 @@ rpl_remove_routes_by_nexthop(uip_ipaddr_t *nexthop, rpl_dag_t *dag)
 
   while(r != NULL) {
     if(uip_ipaddr_cmp(uip_ds6_route_nexthop(r), nexthop) &&
-        r->state.dag == dag) {
-      r->state.lifetime = 0;
+       r->state.dag == dag) {
+      uip_ds6_route_rm(r);
+      r = uip_ds6_route_head();
+    } else {
+      r = uip_ds6_route_next(r);
     }
-    r = uip_ds6_route_next(r);
   }
   ANNOTATE("#L %u 0\n", nexthop->u8[sizeof(uip_ipaddr_t) - 1]);
 }
@@ -237,8 +232,7 @@ rpl_add_route(rpl_dag_t *dag, uip_ipaddr_t *prefix, int prefix_len,
 
   rep->state.dag = dag;
   rep->state.lifetime = RPL_LIFETIME(dag->instance, dag->instance->default_lifetime);
-  /* always clear state flags for the no-path received when adding/refreshing */
-  RPL_ROUTE_CLEAR_NOPATH_RECEIVED(rep);
+  rep->state.learned_from = RPL_ROUTE_FROM_INTERNAL;
 
   PRINTF("RPL: Added a route to ");
   PRINT6ADDR(prefix);
@@ -267,6 +261,10 @@ rpl_link_neighbor_callback(const linkaddr_t *addr, int status, int numtx)
         /* Trigger DAG rank recalculation. */
         PRINTF("RPL: rpl_link_neighbor_callback triggering update\n");
         parent->flags |= RPL_PARENT_FLAG_UPDATED;
+        if(instance->of->neighbor_link_callback != NULL) {
+          instance->of->neighbor_link_callback(parent, status, numtx);
+          parent->last_tx_time = clock_time();
+        }
       }
     }
   }
@@ -281,11 +279,7 @@ rpl_ipv6_neighbor_callback(uip_ds6_nbr_t *nbr)
 
   PRINTF("RPL: Neighbor state changed for ");
   PRINT6ADDR(&nbr->ipaddr);
-#if UIP_ND6_SEND_NS || UIP_ND6_SEND_RA
   PRINTF(", nscount=%u, state=%u\n", nbr->nscount, nbr->state);
-#else /* UIP_ND6_SEND_NS || UIP_ND6_SEND_RA */
-  PRINTF(", state=%u\n", nbr->state);
-#endif /* UIP_ND6_SEND_NS || UIP_ND6_SEND_RA */
   for(instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES; instance < end; ++instance) {
     if(instance->used == 1 ) {
       p = rpl_find_parent_any_dag(instance, &nbr->ipaddr);
@@ -300,38 +294,10 @@ rpl_ipv6_neighbor_callback(uip_ds6_nbr_t *nbr)
 }
 /*---------------------------------------------------------------------------*/
 void
-rpl_purge_dags(void)
-{
-  rpl_instance_t *instance;
-  rpl_instance_t *end;
-  int i;
-
-  for(instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES;
-      instance < end; ++instance) {
-    if(instance->used) {
-      for(i = 0; i < RPL_MAX_DAG_PER_INSTANCE; i++) {
-        if(instance->dag_table[i].used) {
-          if(instance->dag_table[i].lifetime == 0) {
-            if(!instance->dag_table[i].joined) {
-              PRINTF("RPL: Removing dag ");
-              PRINT6ADDR(&instance->dag_table[i].dag_id);
-              PRINTF("\n");
-              rpl_free_dag(&instance->dag_table[i]);
-            }
-          } else {
-            instance->dag_table[i].lifetime--;
-          }
-        }
-      }
-    }
-  }
-}
-/*---------------------------------------------------------------------------*/
-void
 rpl_init(void)
 {
   uip_ipaddr_t rplmaddr;
-  PRINTF("RPL: RPL started\n");
+  PRINTF("RPL started\n");
   default_instance = NULL;
 
   rpl_dag_init();
@@ -346,9 +312,7 @@ rpl_init(void)
   memset(&rpl_stats, 0, sizeof(rpl_stats));
 #endif
 
-#if RPL_WITH_NON_STORING
-  rpl_ns_init();
-#endif /* RPL_WITH_NON_STORING */
+  RPL_OF.reset(NULL);
 }
 /*---------------------------------------------------------------------------*/
 

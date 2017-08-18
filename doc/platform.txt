@@ -108,6 +108,11 @@
  */
 
 /**
+ * \addtogroup sensinode Sensinode
+ * \ingroup platform
+ */
+
+/**
  * \addtogroup sky The Tmote Sky Board
  * \ingroup platform
  */

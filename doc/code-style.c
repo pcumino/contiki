@@ -7,13 +7,15 @@
  * belong to the same module. Typically, the \defgroup is placed in
  * the .h file and \addtogroup in the .c file.
  *
- * The Contiki source code contains an Uncrustify configuration file,
- * uncrustify.cfg, under tools/code-style and small helper scripts are
- * provided at the same place. Note that this is not a silver bullet -
- * for example, the script does not add separators between functions,
- * nor does it format comments correctly. The script should be treated
- * as an aid in formatting code: first run the formatter on the source
- * code, then manually edit the file.
+ * The Contiki source code contains a GNU Indent script that can
+ * automatically format a C code file to match the Contiki code
+ * style. The Indent configuration is in contiki/tools/indent.pro and
+ * a small helper script is in contiki/tools/contiki-indent. Note that
+ * this is not a silver bullet - for example, the script does not add
+ * separators between functions, nor does it format comments
+ * correctly. The script should be treated as an aid in formatting
+ * code: first run the formatter on the source code, then manually
+ * edit the file.
  *
  * @{
  */
@@ -72,22 +74,22 @@ static int flag;
  *             between the name and the first parenthesis), followed
  *             by a single curly bracket on its own line.
  */
-int
-code_style_example_function(char c)
+void
+code_style_example_function(void)
 {
   /*
    * Local variables should always be declared at the start of the
    * function.
    */
   int i;                   /* Use short variable names for loop
-                              counters. */
+			      counters. */
 
   /*
    * There should be no space between keywords and the first
    * parenthesis. There should be spaces around binary operators, no
    * spaces between a unary operator and its operand.
    *
-   * Curly brackets following for(), if(), do, and switch() statements
+   * Curly brackets following for(), if(), do, and case() statements
    * should follow the statement on the same line.
    */
   for(i = 0; i < 10; ++i) {
@@ -98,25 +100,12 @@ code_style_example_function(char c)
      * are less error prone.
      */
     if(i == c) {
-      return 1;           /* No parentesis around return values. */
+      return c;           /* No parentesis around return values. */
     } else {              /* The else keyword is placed inbetween
-                             curly brackers, always on its own line. */
+			     curly brackers, always on its own line. */
       c++;
     }
   }
-
-  /*
-   * Indent "case" statement and "default" label by two spaces in "switch"
-   * statement.
-   */
-  switch(c) {
-    case 19:
-      return 1;
-    default:
-      break;
-  }
-
-  return 0;
 }
 /*---------------------------------------------------------------------------*/
 /*

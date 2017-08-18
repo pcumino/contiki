@@ -84,10 +84,11 @@ init(void)
   printf("ip64-eth-interface: init\n");
 }
 /*---------------------------------------------------------------------------*/
-static int
+static void
 output(void)
 {
   int len, ret;
+
 
   printf("ip64-interface: output source ");
   PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
@@ -113,11 +114,9 @@ output(void)
       printf("Create request\n");
       len = ip64_arp_create_arp_request(ip64_packet_buffer,
 					&ip64_packet_buffer[sizeof(struct ip64_eth_hdr)]);
-      return IP64_ETH_DRIVER.output(ip64_packet_buffer, len);
+      IP64_ETH_DRIVER.output(ip64_packet_buffer, len);
     }
   }
-
-  return 0;
 }
 /*---------------------------------------------------------------------------*/
 const struct uip_fallback_interface ip64_eth_interface = {

@@ -65,7 +65,7 @@
 /*---------------------------------------------------------------------------*/
 #define DEBUG 0
 #if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
+#define PRINTF(...) PRINTF(__VA_ARGS__)
 #else
 #define PRINTF(...)
 #endif
@@ -130,7 +130,6 @@ typedef enum {
 /*---------------------------------------------------------------------------*/
 /* Protothread send macros */
 #define PT_MQTT_WRITE_BYTES(conn, data, len)                                   \
-  conn->out_write_pos = 0;                                                     \
   while(write_bytes(conn, data, len)) {                                        \
     PT_WAIT_UNTIL(pt, (conn)->out_buffer_sent);                                \
   }
@@ -148,18 +147,14 @@ typedef enum {
  */
 #define PT_MQTT_WAIT_SEND()                                                    \
   do {                                                                         \
-    if (PROCESS_ERR_OK ==                                                      \
-      process_post(PROCESS_CURRENT(), mqtt_continue_send_event, NULL)) {       \
-      do {                                                                     \
-        PROCESS_WAIT_EVENT();                                                  \
-        if(ev == mqtt_abort_now_event) {                                       \
-          conn->state = MQTT_CONN_STATE_ABORT_IMMEDIATE;                       \
-          PT_INIT(&conn->out_proto_thread);                                    \
-          process_post(PROCESS_CURRENT(), ev, data);                           \
-        } else if(ev >= mqtt_event_min && ev <= mqtt_event_max) {              \
-          process_post(PROCESS_CURRENT(), ev, data);                           \
-        }                                                                      \
-      } while (ev != mqtt_continue_send_event);                                \
+    process_post(PROCESS_CURRENT(), mqtt_continue_send_event, NULL);           \
+    PROCESS_WAIT_EVENT();                                                      \
+    if(ev == mqtt_abort_now_event) {                                           \
+      conn->state = MQTT_CONN_STATE_ABORT_IMMEDIATE;                           \
+      PT_EXIT(&conn->out_proto_thread);                                        \
+      process_post(PROCESS_CURRENT(), ev, data);                               \
+    } else if(ev >= mqtt_event_min && ev <= mqtt_event_max) {                  \
+      process_post(PROCESS_CURRENT(), ev, data);                               \
     }                                                                          \
   } while(0)
 /*---------------------------------------------------------------------------*/
@@ -756,8 +751,6 @@ handle_connack(struct mqtt_connection *conn)
     call_event(conn,
                MQTT_EVENT_CONNECTION_REFUSED_ERROR,
                &conn->in_packet.payload[1]);
-    abort_connection(conn);
-    return;
   }
 
   conn->out_packet.qos_state = MQTT_QOS_STATE_GOT_ACK;
@@ -1193,8 +1186,8 @@ PROCESS_THREAD(mqtt_process, ev, data)
       if(conn->state == MQTT_CONN_STATE_SENDING_MQTT_DISCONNECT) {
         if(conn->out_buffer_sent == 1) {
           PT_INIT(&conn->out_proto_thread);
-          while(conn->state != MQTT_CONN_STATE_ABORT_IMMEDIATE &&
-                disconnect_pt(&conn->out_proto_thread, conn) < PT_EXITED) {
+          while(disconnect_pt(&conn->out_proto_thread, conn) < PT_EXITED &&
+                conn->state != MQTT_CONN_STATE_ABORT_IMMEDIATE) {
             PT_MQTT_WAIT_SEND();
           }
           abort_connection(conn);
@@ -1211,8 +1204,8 @@ PROCESS_THREAD(mqtt_process, ev, data)
       if(conn->out_buffer_sent == 1 &&
          conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER) {
         PT_INIT(&conn->out_proto_thread);
-        while(conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER &&
-              pingreq_pt(&conn->out_proto_thread, conn) < PT_EXITED) {
+        while(pingreq_pt(&conn->out_proto_thread, conn) < PT_EXITED &&
+              conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER) {
           PT_MQTT_WAIT_SEND();
         }
       }
@@ -1224,8 +1217,8 @@ PROCESS_THREAD(mqtt_process, ev, data)
       if(conn->out_buffer_sent == 1 &&
          conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER) {
         PT_INIT(&conn->out_proto_thread);
-        while(conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER &&
-              subscribe_pt(&conn->out_proto_thread, conn) < PT_EXITED) {
+        while(subscribe_pt(&conn->out_proto_thread, conn) < PT_EXITED &&
+              conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER) {
           PT_MQTT_WAIT_SEND();
         }
       }
@@ -1237,8 +1230,8 @@ PROCESS_THREAD(mqtt_process, ev, data)
       if(conn->out_buffer_sent == 1 &&
          conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER) {
         PT_INIT(&conn->out_proto_thread);
-        while(conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER &&
-              unsubscribe_pt(&conn->out_proto_thread, conn) < PT_EXITED) {
+        while(unsubscribe_pt(&conn->out_proto_thread, conn) < PT_EXITED &&
+              conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER) {
           PT_MQTT_WAIT_SEND();
         }
       }
@@ -1250,8 +1243,8 @@ PROCESS_THREAD(mqtt_process, ev, data)
       if(conn->out_buffer_sent == 1 &&
          conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER) {
         PT_INIT(&conn->out_proto_thread);
-        while(conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER &&
-              publish_pt(&conn->out_proto_thread, conn) < PT_EXITED) {
+        while(publish_pt(&conn->out_proto_thread, conn) < PT_EXITED &&
+              conn->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER) {
           PT_MQTT_WAIT_SEND();
         }
       }
@@ -1338,9 +1331,7 @@ mqtt_connect(struct mqtt_connection *conn, char *host, uint16_t port,
   conn->connect_vhdr_flags |= MQTT_VHDR_CLEAN_SESSION_FLAG;
 
   /* convert the string IPv6 address to a numeric IPv6 address */
-  if(uiplib_ip6addrconv(host, &ip6addr) == 0) {
-    return MQTT_STATUS_ERROR;
-  }
+  uiplib_ip6addrconv(host, &ip6addr);
 
   uip_ipaddr_copy(&(conn->server_ip), ipaddr);
 

@@ -13,8 +13,7 @@ hello-world/wismote \
 hello-world/z1 \
 eeprom-test/native \
 collect/sky \
-er-rest-example/wismote \
-ipso-objects/wismote \
+er-rest-example/sky \
 example-shell/native \
 netperf/sky \
 powertrace/sky \
@@ -32,14 +31,9 @@ telnet-server/minimal-net \
 webserver/minimal-net \
 webserver-ipv6/eval-adf7xxxmb4z \
 wget/minimal-net \
-zolertia/z1/z1 \
+z1/z1 \
 settings-example/avr-raven \
 ipv6/multicast/sky \
-sensniff/z1 \
-cfs-coffee/sky \
-cfs-coffee/z1 \
-cfs-coffee/wismote \
-cfs-coffee/avr-raven
 
 TOOLS=
 

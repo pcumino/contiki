@@ -71,8 +71,12 @@ static uint8_t round_keys[11][AES_128_KEY_LENGTH];
 static uint8_t
 galois_mul2(uint8_t value)
 {
-  uint8_t xor_val = (value >> 7) * 0x1b;
-  return ((value << 1) ^ xor_val);
+  if(value >> 7) {
+    value = value << 1;
+    return value ^ 0x1b;
+  } else {
+    return value << 1;
+  }
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -164,6 +168,17 @@ encrypt(uint8_t *state)
       state[i] = state[i] ^ round_keys[round][i];
     }
   }
+}
+/*---------------------------------------------------------------------------*/
+void
+aes_128_padded_encrypt(uint8_t *plaintext_and_result, uint8_t plaintext_len)
+{
+  uint8_t block[AES_128_BLOCK_SIZE];
+  
+  memset(block, 0, AES_128_BLOCK_SIZE);
+  memcpy(block, plaintext_and_result, plaintext_len);
+  AES_128.encrypt(block);
+  memcpy(plaintext_and_result, block, plaintext_len);
 }
 /*---------------------------------------------------------------------------*/
 void

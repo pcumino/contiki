@@ -68,9 +68,7 @@ typedef CFS_CONF_OFFSET_TYPE cfs_offset_t;
 #endif
 
 struct cfs_dir {
-  /* Iteration state, which is implementation-defined and should not be
-     accessed externally. */
-  char state[32];
+  char dummy_space[32];
 };
 
 struct cfs_dirent {
