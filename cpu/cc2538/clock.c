@@ -49,7 +49,7 @@
  * Clock driver implementation for the TI cc2538
  */
 #include "contiki.h"
-#include "cc2538_cm3.h"
+#include "systick.h"
 #include "reg.h"
 #include "cpu.h"
 #include "dev/gptimer.h"
@@ -69,12 +69,12 @@
 #endif
 #define PRESCALER_VALUE         (SYS_CTRL_SYS_CLOCK / SYS_CTRL_1MHZ - 1)
 
-/* Period of the SysTick counter expressed as a number of ticks */
+/* Reload value for SysTick counter */
 #if SYS_CTRL_SYS_CLOCK % CLOCK_SECOND
 /* Too low clock speeds will lead to reduced accurracy */
 #error System clock speed too slow for CLOCK_SECOND, accuracy reduced
 #endif
-#define SYSTICK_PERIOD          (SYS_CTRL_SYS_CLOCK / CLOCK_SECOND)
+#define RELOAD_VALUE            (SYS_CTRL_SYS_CLOCK / CLOCK_SECOND - 1)
 
 static volatile uint64_t rt_ticks_startup = 0, rt_ticks_epoch = 0;
 /*---------------------------------------------------------------------------*/
@@ -92,7 +92,13 @@ static volatile uint64_t rt_ticks_startup = 0, rt_ticks_epoch = 0;
 void
 clock_init(void)
 {
-  SysTick_Config(SYSTICK_PERIOD);
+  REG(SYSTICK_STRELOAD) = RELOAD_VALUE;
+
+  /* System clock source, Enable */
+  REG(SYSTICK_STCTRL) |= SYSTICK_STCTRL_CLK_SRC | SYSTICK_STCTRL_ENABLE;
+
+  /* Enable the SysTick Interrupt */
+  REG(SYSTICK_STCTRL) |= SYSTICK_STCTRL_INTEN;
 
   /*
    * Remove the clock gate to enable GPT0 and then initialise it
@@ -224,12 +230,12 @@ void
 clock_adjust(void)
 {
   /* Halt the SysTick while adjusting */
-  SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
+  REG(SYSTICK_STCTRL) &= ~SYSTICK_STCTRL_ENABLE;
 
   update_ticks();
 
   /* Re-Start the SysTick */
-  SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+  REG(SYSTICK_STCTRL) |= SYSTICK_STCTRL_ENABLE;
 }
 /*---------------------------------------------------------------------------*/
 /**

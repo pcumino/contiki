@@ -27,28 +27,19 @@
  * SUCH DAMAGE. 
  *
  * This file is part of the Contiki operating system.
- *
+ * 
  * Author: Oliver Schmidt <ol.sc@web.de>
- * Author: Greg King <gregdk@users.sf.net>
  *
  */
 
 #ifndef PFS_H_
 #define PFS_H_
 
-#include <sys/types.h>
-
-struct cfs_dir;
-struct cfs_dirent;
-
-int   __fastcall__ pfs_open(const char *name, int flags);
-void  __fastcall__ pfs_close(int fd);
-int   __fastcall__ pfs_read(int fd, void *buf, unsigned int len);
-int   __fastcall__ pfs_write(int fd, const void *buf, unsigned int len);
-off_t __fastcall__ pfs_seek(int fd, off_t offset, int whence);
-int   __fastcall__ pfs_remove(const char *name);
-int   __fastcall__ pfs_opendir(struct cfs_dir *dirp, const char *name);
-void  __fastcall__ pfs_closedir(struct cfs_dir *dirp);
-int   __fastcall__ pfs_readdir(struct cfs_dir *dirp, struct cfs_dirent *dirent);
+int  __fastcall__ pfs_open(const char* name, int flags);
+void __fastcall__ pfs_close(int fd);
+int  __fastcall__ pfs_read(int fd, void* buf, unsigned int len);
+int  __fastcall__ pfs_write(int fd, void* buf, unsigned int len);
+int  __fastcall__ pfs_seek(int fd, int offset, int whence);
+int  __fastcall__ pfs_remove(const char *name);
 
 #endif /* PFS_H_ */

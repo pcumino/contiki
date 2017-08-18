@@ -99,7 +99,7 @@ rtimer_arch_schedule(rtimer_clock_t t)
   /* Store the value. The LPM module will query us for it */
   next_trigger = t;
 
-  NVIC_EnableIRQ(SMT_IRQn);
+  nvic_interrupt_enable(NVIC_INT_SM_TIMER);
 }
 /*---------------------------------------------------------------------------*/
 rtimer_clock_t
@@ -147,8 +147,8 @@ rtimer_isr()
 
   next_trigger = 0;
 
-  NVIC_ClearPendingIRQ(SMT_IRQn);
-  NVIC_DisableIRQ(SMT_IRQn);
+  nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
+  nvic_interrupt_disable(NVIC_INT_SM_TIMER);
 
   rtimer_run_next();
 

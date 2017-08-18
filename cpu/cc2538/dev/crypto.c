@@ -61,8 +61,8 @@ crypto_isr(void)
 {
   ENERGEST_ON(ENERGEST_TYPE_IRQ);
 
-  NVIC_ClearPendingIRQ(AES_IRQn);
-  NVIC_DisableIRQ(AES_IRQn);
+  nvic_interrupt_unpend(NVIC_INT_AES);
+  nvic_interrupt_disable(NVIC_INT_AES);
 
   if(notification_process != NULL) {
     process_poll((struct process *)notification_process);
