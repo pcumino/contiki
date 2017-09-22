@@ -71,7 +71,8 @@ PROCESS_THREAD(example_broadcast_process, ev, data)
 
 
   /* Start powertracing, once every two seconds. */
-  powertrace_start(CLOCK_SECOND * 2);
+  // powertrace_start(CLOCK_SECOND * 2);
+  powertrace_start(CLOCK_SECOND * 10);
   
   broadcast_open(&broadcast, 129, &broadcast_call);
 

@@ -42,9 +42,6 @@
 #include "contiki.h"
 #include "contiki-net.h"
 #include "rest-engine.h"
-//Ariker> add this line
-//#include "../apps/powertrace/powertrace.h"
-#include "powertrace.h"
 
 #if PLATFORM_HAS_BUTTON
 #include "dev/button-sensor.h"
@@ -103,21 +100,10 @@ AUTOSTART_PROCESSES(&er_example_server);
 PROCESS_THREAD(er_example_server, ev, data)
 {
   PROCESS_BEGIN();
-// Ariker> Battery Settings
-unsigned seconds=60*5;// warning: if this variable is changed, then the kinect variable the count the minutes should be changed
-double fixed_perc_energy = 0.2;// 0 - 1
-unsigned variation = 2;//0 - 99
-
-//Ariker> add this line
-powertrace_start(CLOCK_SECOND * seconds, seconds, fixed_perc_energy, variation);
-//powertrace_start(CLOCK_SECOND * 10);
-
 
   PROCESS_PAUSE();
 
   PRINTF("Starting Erbium Example Server\n");
-
-
 
 #ifdef RF_CHANNEL
   PRINTF("RF channel: %u\n", RF_CHANNEL);

@@ -43,7 +43,6 @@
 #include "powertrace.h"
 #include "net/rime/rime.h"
 #include <math.h>
-#include <all-in-one.c>
 
 #include <stdio.h>
 #include <string.h>
@@ -70,22 +69,25 @@ MEMB(stats_memb, struct powertrace_sniff_stats, MAX_NUM_STATS);
 LIST(stats_list);
 
 
+
+
 PROCESS(powertrace_process, "Periodic power output");
+
+
 
 //####################################################################
 //############# Piece of Code Added By André Riker ###################
 //############# KIBAM BATTERY FOR CONTIKI ############################
 //####################################################################
 
+
 unsigned timer_couter=0;
 unsigned btt_interval_sec;
 unsigned btt_interval_min;
 double total_consumption=0;
 double periodic_consumption=0;
-unsigned solar_array_couter=0;
-unsigned btt_interval_sec, btt_interval_min;
-unsigned day_profile=0; // Change it if you want to start with a different day
-short new_day=1;
+
+
 
 struct battery{
   // Maximum amount of charge in battery (microAh) - static
@@ -505,80 +507,46 @@ double q0, q1, q2, id_max, ic_max;
 
 
 void update_battery(){
+
+  // HARVESTING: Increment a state here
+  int num_states=4;
+  double current_draw[num_states];
+  unsigned long time_each_stt[num_states];
+  int stt_couter;
+  
+  // Variables related to Time conversion
   double convert_tick2sec=0.000030517578125;//A single time tick
   double convert_sec2hour=0.0002777777777778;// 1/3600
   unsigned long convert_tick2nano=30517;// a nanoseconds for a single time tick
-  double voltage=0.2;//it is 1/5v
-  double efficiency_painel=0.2;
-  double convert2micro=1000000;
-  double painel_area=210;//in cm2. 
-  double current_draw[5];// in micro A
-  unsigned long time_each_stt[5];
-  double solar_charging;
-  int stt_couter, num_states=5;
-  long unsigned sim_time_minutes;
-  unsigned start_sunlight=8, end_sunlight=start_sunlight+13;// in hours, considering 24h --- Trace is conf to run 13, which means between 8h to 21h
-  unsigned duration_solartrace_value=1;// number of timer_counter's units which the solar value longs 
 
-  
-//-------- selects another day profile in the begining of a new day -----------------
-  if(new_day==1){
-  //day_profile=(unsigned)(random_rand()*100000L)*0.0001;//random_rand() returns 0 - 65375. So, this line makes day_profile a number between 0-6
-  if(day_profile<6)
-  day_profile++;
-  else day_profile=0;
-  printf("Battery: Day is %u \n",day_profile);
-  new_day=0;
-  }
-
-//-------- Controls the time -----------------
-  timer_couter=timer_couter+btt_interval_min;
-  sim_time_minutes=timer_couter; // assuming the battery interval is 60 seconds - 1 minute
-  printf("Battery: Timer couter is %u and Time is %u \n",timer_couter, (unsigned) sim_time_minutes);
-  
-//-------- Computes the current charging -----------------
-  if((sim_time_minutes>=start_sunlight*60) && (sim_time_minutes<=end_sunlight*60)){// it is in the sun light time
-	solar_charging=(unsigned long)(solar_array[day_profile][solar_array_couter]* efficiency_painel* voltage* painel_area);//read the array with solar current values (in micro Watt)
-	printf("Battery: 1 Solar charging is %lu \n",(unsigned long)(solar_charging));
-	solar_charging=-1*solar_charging;//the current should be negative in case of charging. Kinetic model requires it.
-	if(sim_time_minutes % duration_solartrace_value == 0) solar_array_couter++; // For this solar trace, it is 5 min
-    }
-  else{ // there is no sun light, so it does not compute solar charging
-	solar_charging=0;
-	num_states=4;
-	}
-  if(solar_array_couter>=size_of_solar_array)solar_array_couter=0;//it should be an error
-  if(sim_time_minutes>=(24*60)){// end of a day
-	timer_couter=0;
-	new_day=1;
-	solar_array_couter=0;
-	printf("Battery: End of day \n");
-	}// reset for a new day
-
-//-------- Set the current spend/collect in every state -----------------
+  //-------- Set the current spend/collect in every state -----------------
   current_draw[0] = i_energyStt.active;
   current_draw[1] = i_energyStt.low_power;
   current_draw[2] = i_energyStt.tx;
   current_draw[3] = i_energyStt.rx;
-  current_draw[4] = solar_charging;//solar charging current. It should be negative
   
-//-------- Set the time spent in every state -----------------
+  // HARVESTING: SET THE HARVESTING CURRENT
+  // current_draw[4] = solar_charging;
+  
+  //-------- Set the time spent in every state -----------------
+  powertrace_print("");// In this fuction time in state is updated
   time_each_stt[0] = stats_com.cpu;
   time_each_stt[1] = stats_com.lpm;
   time_each_stt[2] = stats_com.transmit + stats_com.idle_transmit;
   time_each_stt[3] = stats_com.listen + stats_com.idle_listen;
-  time_each_stt[4] = stats_com.cpu + stats_com.lpm; // solar charging time (in ticks) 
+
+  // HARVESTING: SET THE HARVESTING TIME
+  // time_each_stt[4] = harvesting time; 
   
 //-------- call the Kinetic model -----------------
   for(stt_couter=0;stt_couter<num_states;stt_couter++){
-	// --------------------------------------- Variable Battery parameters ------------------------------
-	// Define the charging or discharging current (microAh)
+	// Set the charging current (microA)
 	batt.i=current_draw[stt_couter];
 	
-	if(stt_couter<4){ // this is because harvesting does not count for energy consumption
+
 	total_consumption=total_consumption + (current_draw[stt_couter]*time_each_stt[stt_couter]*convert_tick2sec*convert_sec2hour);
 	periodic_consumption = (current_draw[stt_couter]*time_each_stt[stt_couter]*convert_tick2sec*convert_sec2hour);
-	}
+
 	// Define the time step (hour)
 	batt.dt=time_each_stt[stt_couter]*convert_tick2sec*convert_sec2hour; // convert from seconds to hours
 	
@@ -590,19 +558,32 @@ void update_battery(){
 	kinetic_model();
  
 	// prints
-	printf("Battery: Available charge at next time interval is %lu (microAh) \n",(unsigned long) (batt.q1_0));
-	printf("Battery: Bound charge at next time interval is %lu (microAh) \n",(unsigned long) (batt.q2_0));
-	//PRINTF("Battery: Time of CPU in state %d in nanoseconds is %lu \n",j,(unsigned long)time_each_stt[j]*convert_tick2nano);
-	printf("Battery: Number of CPU ticks in state %d is %lu \n",stt_couter,time_each_stt[stt_couter]);
+	printf("KIBAM Battery: Energy computation for state %d \n",stt_couter);
+	printf("KIBAM Battery: Available charge at next time interval is %lu (microAh) \n",(unsigned long) (batt.q1_0));
+	//printf("Battery: Bound charge at next time interval is %lu (microAh) \n",(unsigned long) (batt.q2_0));
+	printf("KIBAM Battery: Time in state %d in nanoseconds is %lu \n",stt_couter,(unsigned long)time_each_stt[stt_couter]*convert_tick2nano);
+	//printf("Battery: Number ticks in state %d is %lu \n",stt_couter,time_each_stt[stt_couter]);
+	printf("-------------------------------------------\n");
   }
   
     // Print
-	printf("Log: Residual (microAh); %lu; \n",(unsigned long) (batt.q1_0));
-	//PRINTF("Battery: Bound charge at next time interval is %lu (microAh) \n",(unsigned long) (batt.q2_0));
-	printf("Log: Energy Total consumption (microA); %lu;  \n",(unsigned long) (total_consumption));
-	printf("Log: Energy Periodic consumption (microA); %d;  \n",(int) (periodic_consumption));
-	printf("Energy: CPU ticks %lu, LPM %lu, Tx %lu, Rx %lu \n", stats_com.cpu, stats_com.lpm, stats_com.transmit, stats_com.listen);
+	printf("General Stats of the battery\n");
+	printf("KIBAM Battery: Residual (microAh); %lu; \n",(unsigned long) (batt.q1_0));
+	printf("KIBAM Battery: Bound charge at next time interval is %lu (microAh) \n",(unsigned long) (batt.q2_0));
+	printf("KIBAM Battery: Energy Total consumption (microA); %lu;  \n",(unsigned long) (total_consumption));
+	printf("KIBAM Battery: Energy Periodic consumption (microA); %d;  \n",(int) (periodic_consumption));
+	//printf("Energy: CPU ticks %lu, LPM %lu, Tx %lu, Rx %lu \n", stats_com.cpu, stats_com.lpm, stats_com.transmit, stats_com.listen);
+	printf("-------------------------------------------\n");
 
+  
+}
+
+long double get_battery_charge(){
+    return batt.q1_0;	
+}
+
+double get_max_charge(){
+    return batt.qmax;	
 }
 
 //###############################################################################################

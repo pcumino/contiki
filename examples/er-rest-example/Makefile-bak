@@ -4,9 +4,6 @@ all: er-example-server er-example-client
 CONTIKI=../..
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
-LDFLAGS+=-lm
-CFLAGS+=-lm
-TARGET_LIBFILES+=-lm
 
 # automatically build RESTful resources
 REST_RESOURCES_DIR = ./resources
@@ -29,7 +26,6 @@ SMALL=1
 # REST Engine shall use Erbium CoAP implementation
 APPS += er-coap
 APPS += rest-engine
-APPS+=powertrace
 
 # optional rules to get assembly
 #CUSTOM_RULE_C_TO_OBJECTDIR_O = 1

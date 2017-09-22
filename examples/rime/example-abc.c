@@ -46,6 +46,18 @@
 #include "dev/leds.h"
 
 #include <stdio.h>
+
+#include "node-id.h"
+
+
+int msfSize(char *n){
+  int i = 1;
+  while(n[i] != '\0'){
+    i++;
+  }
+  return i;
+}
+
 /*---------------------------------------------------------------------------*/
 PROCESS(example_abc_process, "ABC example");
 AUTOSTART_PROCESSES(&example_abc_process);
@@ -71,11 +83,19 @@ PROCESS_THREAD(example_abc_process, ev, data)
   while(1) {
 
     /* Delay 2-4 seconds */
-    etimer_set(&et, CLOCK_SECOND * 2 + random_rand() % (CLOCK_SECOND * 2));
+    // etimer_set(&et, CLOCK_SECOND * 2 + random_rand() % (CLOCK_SECOND * 2));
+    etimer_set(&et, CLOCK_SECOND * 3 + random_rand() % (CLOCK_SECOND * 8));
 
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-    packetbuf_copyfrom("Hello", 6);
+    // char *msg;
+    char number[10];
+    char *bar = itoa(node_id, number, 10);
+    char str[80];
+    strcpy(str, "MSG from ");
+    strcat(str, bar);
+
+    packetbuf_copyfrom(str, msfSize(str));
     abc_send(&abc);
     printf("abc message sent\n");
   }

@@ -32,55 +32,26 @@
 
 /**
  * \file
- *         Contiki Collect View Shell
+ *         Header file for the powertrace application
  * \author
  *         Adam Dunkels <adam@sics.se>
  */
 
-#include "contiki.h"
-// #include "shell.h"
-// #include "serial-shell.h"
-// #include "collect-view.h"
+#ifndef POWERTRACE_H
+#define POWERTRACE_H
 
-#define WITH_COFFEE 0
+#include "sys/clock.h"
 
-/*---------------------------------------------------------------------------*/
-PROCESS(collect_view_shell_process, "Contiki Collect View Shell");
-AUTOSTART_PROCESSES(&collect_view_shell_process);
-/*---------------------------------------------------------------------------*/
-PROCESS_THREAD(collect_view_shell_process, ev, data)
-{
-  PROCESS_BEGIN();
+void powertrace_start(clock_time_t perioc);
+void powertrace_stop(void);
 
-//   serial_shell_init();
-//   shell_blink_init();
+typedef enum {
+  POWERTRACE_ON,
+  POWERTRACE_OFF
+} powertrace_onoff_t;
 
-// #if WITH_COFFEE
-//   shell_file_init();
-//   shell_coffee_init();
-// #endif /* WITH_COFFEE */
+void powertrace_sniff(powertrace_onoff_t onoff);
 
-  /* shell_download_init(); */
-  /* shell_rime_sendcmd_init(); */
-  /* shell_ps_init(); */
-  // shell_reboot_init();
-  // shell_rime_init();
-  // shell_rime_netcmd_init();
-  /* shell_rime_ping_init(); */
-  /* shell_rime_debug_init(); */
-  /* shell_rime_debug_runicast_init(); */
-  // shell_powertrace_init();
-  /* shell_base64_init(); */
-  // shell_text_init();
-  // shell_time_init();
-  /* shell_sendtest_init(); */
+void powertrace_print(char *str);
 
-// #if CONTIKI_TARGET_SKY
-//   shell_sky_init();
-// #endif  CONTIKI_TARGET_SKY 
-
-//   shell_collect_view_init();
-
-  PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
+#endif /* POWERTRACE_H */
